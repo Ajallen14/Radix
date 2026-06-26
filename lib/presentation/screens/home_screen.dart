@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/core_providers.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.only(
@@ -18,21 +20,13 @@ class HomeScreen extends StatelessWidget {
           children: [
             _buildHeroCard(),
             const SizedBox(height: 32),
-
-            // Date Scroller
             _buildDateScroller(),
             const SizedBox(height: 32),
-
-            // 'Daily Program' Header
             _buildRoutinesHeader(),
             const SizedBox(height: 16),
-
-            // Category Filters
             _buildCategoryFilters(),
             const SizedBox(height: 24),
-
-            // 5. The Routines Grid
-            _buildRoutinesGrid(),
+            _buildRoutinesGrid(ref), // Pass ref here to read dynamic routines
           ],
         ),
       ),
@@ -81,37 +75,44 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildDateScroller() {
-    // Mock data for demonstration.
-    final List<Map<String, dynamic>> weekDays = [
-      {'day': 'Mon', 'date': '22', 'isToday': false, 'hasWorkout': true},
-      {'day': 'Tue', 'date': '23', 'isToday': false, 'hasWorkout': false},
-      {'day': 'Wed', 'date': '24', 'isToday': false, 'hasWorkout': true},
-      {'day': 'Thu', 'date': '25', 'isToday': true, 'hasWorkout': false},
-      {'day': 'Fri', 'date': '26', 'isToday': false, 'hasWorkout': false},
-    ];
+    final now = DateTime.now();
+    // Calculate the Monday of the current week
+    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    // Generate exactly 7 days starting from Monday
+    final weekDates = List.generate(
+      7,
+      (index) => startOfWeek.add(Duration(days: index)),
+    );
+
+    final dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
     return SizedBox(
       height: 80,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: weekDays.length,
+        itemCount: weekDates.length,
         itemBuilder: (context, index) {
-          final day = weekDays[index];
+          final date = weekDates[index];
+          final isToday =
+              date.day == now.day &&
+              date.month == now.month &&
+              date.year == now.year;
+
+          // Placeholder logic: Highlight past days as "worked out" randomly for testing.
+          // Eventually, you will query SQLite to see if date < now has a workout log.
+          final hasWorkout = date.isBefore(now) && index % 2 == 0;
+
           return Container(
             width: 60,
             margin: const EdgeInsets.only(right: 12),
             decoration: BoxDecoration(
-              color: day['isToday']
-                  ? const Color(0xFFA4EB3F)
-                  : Colors.transparent,
+              color: isToday ? const Color(0xFFA4EB3F) : Colors.transparent,
               borderRadius: BorderRadius.circular(30),
               border: Border.all(
-                color: day['isToday']
+                color: isToday
                     ? const Color(0xFFA4EB3F)
-                    : day['hasWorkout']
-                    ? const Color(
-                        0xFFA4EB3F,
-                      )
+                    : hasWorkout
+                    ? const Color(0xFFA4EB3F)
                     : const Color(0xFF2A2A2A),
                 width: 2,
               ),
@@ -120,17 +121,17 @@ class HomeScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  day['day'],
+                  dayNames[date.weekday - 1],
                   style: TextStyle(
-                    color: day['isToday'] ? Colors.black : Colors.grey,
+                    color: isToday ? Colors.black : Colors.grey,
                     fontSize: 14,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  day['date'],
+                  date.day.toString(),
                   style: TextStyle(
-                    color: day['isToday'] ? Colors.black : Colors.white,
+                    color: isToday ? Colors.black : Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -144,18 +145,13 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildRoutinesHeader() {
-    return const Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'Daily Program',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
+    return const Text(
+      'Daily Program',
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+      ),
     );
   }
 
@@ -191,56 +187,41 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRoutinesGrid() {
-    return GridView.count(
+  Widget _buildRoutinesGrid(WidgetRef ref) {
+    // Read the dynamic list from Riverpod
+    final routines = ref.watch(routinesProvider);
+
+    return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.4,
-      children: [
-        _routineCard('Chest Program', '4 Sets • 20 Reps', [
-          const Color(0xFF2B5876),
-          const Color(0xFF4E4376),
-        ]),
-        _routineCard('Arms Program', '3 Sets • 12 Reps', [
-          const Color(0xFF1D4350),
-          const Color(0xFF041115),
-        ]),
+      // Add 1 to itemCount to account for the "Add Workout" button at the end
+      itemCount: routines.length + 1,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 1.4,
+      ),
+      itemBuilder: (context, index) {
+        // If we are at the end of the list, render the Add button
+        if (index == routines.length) {
+          return _buildAddWorkoutCard();
+        }
 
-        // Add Workout Card button
-        Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFF2A2A2A),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: Colors.grey.withOpacity(0.3),
-              style: BorderStyle.solid,
-            ),
-          ),
-          child: const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.add_circle_outline,
-                  color: Color(0xFFA4EB3F),
-                  size: 40,
-                ),
-                SizedBox(height: 8),
-                Text('Add Workout', style: TextStyle(color: Colors.white)),
-              ],
-            ),
-          ),
-        ),
-      ],
+        // Otherwise, render the dynamic routine card
+        final routine = routines[index];
+        return _routineCard(
+          routine.title,
+          routine.volume,
+          routine.gradientColors,
+        );
+      },
     );
   }
 
   Widget _routineCard(String title, String volume, List<Color> gradientColors) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -250,11 +231,12 @@ class HomeScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             title,
+            textAlign: TextAlign.center,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 16,
@@ -264,9 +246,33 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             volume,
+            textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAddWorkoutCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF2A2A2A),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.grey.withValues(alpha: 0.3),
+          style: BorderStyle.solid,
+        ),
+      ),
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_circle_outline, color: Color(0xFFA4EB3F), size: 32),
+            SizedBox(height: 8),
+            Text('Add Workout', style: TextStyle(color: Colors.white)),
+          ],
+        ),
       ),
     );
   }

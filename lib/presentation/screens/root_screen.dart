@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/core_providers.dart';
 import 'home_screen.dart';
+import 'active_workout_screen.dart';
 
 class RootScreen extends ConsumerWidget {
   const RootScreen({super.key});
@@ -9,15 +10,9 @@ class RootScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(bottomNavIndexProvider);
-
     final screens = [
       const HomeScreen(),
-      const Center(
-        child: Text(
-          'Active Workout Screen (Coming Soon)',
-          style: TextStyle(color: Colors.white),
-        ),
-      ),
+      const ActiveWorkoutScreen(),
       const Center(
         child: Text(
           'Analytics Screen (Coming Soon)',
@@ -30,10 +25,9 @@ class RootScreen extends ConsumerWidget {
       backgroundColor: const Color(0xFF1A1A1A),
       body: Stack(
         children: [
-          // Main Content Layer
           screens[currentIndex],
 
-          // Floating Navigation Pill Layer
+          // Floating Navigation Pill
           Positioned(
             left: 0,
             right: 0,
