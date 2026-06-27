@@ -96,17 +96,14 @@ class ActiveWorkoutScreen extends ConsumerWidget {
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: () {
-                // Transition to Active Phase
+              onPressed: () async {
+                final repository = ref.read(workoutRepositoryProvider);
+                final newSessionId = await repository.createWorkoutSession(
+                  "Chest & Shoulders",
+                ); //Shopuld make it dynamic later
+                ref.read(activeWorkoutIdProvider.notifier).state = newSessionId;
                 ref.read(isWorkoutActiveProvider.notifier).state = true;
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFA4EB3F),
-                foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
               child: const Text(
                 'Start Workout',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -408,7 +405,6 @@ class ActiveWorkoutScreen extends ConsumerWidget {
                     final weightValue = double.tryParse(weight) ?? 0.0;
                     final repsValue = int.tryParse(reps) ?? 0;
                     ref.read(saveSetProvider)(
-                      1,
                       exerciseName,
                       weightValue,
                       repsValue,

@@ -60,4 +60,14 @@ class WorkoutRepositoryImpl implements IWorkoutRepository {
 
     return totalVolume;
   }
+
+  @override
+  Future<int> createWorkoutSession(String routineName) async {
+    final db = await _dbHelper.database;
+
+    return await db.insert('workouts', {
+      'date': DateTime.now().toIso8601String(),
+      'routine_name': routineName,
+    });
+  }
 }

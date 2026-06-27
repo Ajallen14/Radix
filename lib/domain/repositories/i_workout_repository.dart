@@ -10,4 +10,5 @@ abstract class IWorkoutRepository {
     double weight,
     int reps,
   );
+  Future<int> createWorkoutSession(String routineName);
 }

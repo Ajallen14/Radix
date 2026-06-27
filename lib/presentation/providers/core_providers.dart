@@ -90,14 +90,28 @@ final bottomNavIndexProvider = StateProvider<int>((ref) => 0);
 final isWorkoutActiveProvider = StateProvider<bool>((ref) => false);
 final isRestTimerActiveProvider = StateProvider<bool>((ref) => false);
 
+final activeWorkoutIdProvider = StateProvider<int?>((ref) => null);
+
 // 5. WORKOUT ACTIONS
 final saveSetProvider = Provider((ref) {
   final repository = ref.watch(workoutRepositoryProvider);
-  return (int workoutId, String exerciseName, double weight, int reps) async {
+  return (String exerciseName, double weight, int reps) async {
     try {
-      await repository.saveCompletedSet(workoutId, exerciseName, weight, reps);
+      final currentSessionId = ref.read(activeWorkoutIdProvider);
+
+      if (currentSessionId == null) {
+        print('Error: No active workout session found!');
+        return;
+      }
+
+      await repository.saveCompletedSet(
+        currentSessionId,
+        exerciseName,
+        weight,
+        reps,
+      );
       print(
-        'Saved to SQLite: $exerciseName - $weight kg x $reps',
+        'Saved to SQLite: Session $currentSessionId | $exerciseName - $weight kg x $reps',
       );
     } catch (e) {
       print('Failed to save set: $e');
