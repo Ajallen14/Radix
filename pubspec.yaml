@@ -37,6 +37,8 @@ dependencies:
   equatable: ^2.0.8
   path: ^1.9.1
   vibration: ^3.2.0
+  fl_chart: ^1.2.0
+  intl: ^0.20.3
 
 dev_dependencies:
   flutter_test:

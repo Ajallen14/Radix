@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import '../../data/datasources/database_helper.dart';
 import '../../data/repositories/workout_repository_impl.dart';
 import '../../domain/repositories/i_workout_repository.dart';
+import 'package:intl/intl.dart';
 
 // 1. DATA MODELS
 class RoutineTemplate {
@@ -116,5 +117,55 @@ final saveSetProvider = Provider((ref) {
     } catch (e) {
       print('Failed to save set: $e');
     }
+  };
+});
+
+// Fetches all raw workout sessions
+final recentWorkoutsProvider = FutureProvider<List<Map<String, dynamic>>>((
+  ref,
+) async {
+  final repository = ref.watch(workoutRepositoryProvider);
+  return await repository.getAllWorkouts();
+});
+
+// Processes the data into specific metrics
+final analyticsStatsProvider = FutureProvider<Map<String, dynamic>>((
+  ref,
+) async {
+  final repository = ref.watch(workoutRepositoryProvider);
+  final workouts = await ref.watch(recentWorkoutsProvider.future);
+
+  int daysWorkedOutThisMonth = 0;
+  double maxVolume = 0.0;
+  final now = DateTime.now();
+
+  // Create a map
+  Map<int, double> weeklyVolume = {
+    for (var i = 6; i >= 0; i--) now.subtract(Duration(days: i)).weekday: 0.0,
+  };
+
+  for (var workout in workouts) {
+    final date = DateTime.parse(workout['date']);
+    final workoutId = workout['id'] as int;
+
+    // Calculate Monthly Days
+    if (date.month == now.month && date.year == now.year) {
+      daysWorkedOutThisMonth++;
+    }
+
+    // Calculate Volume
+    final volume = await repository.calculateTotalVolumeForSession(workoutId);
+    if (volume > maxVolume) maxVolume = volume;
+
+    final difference = now.difference(date).inDays;
+    if (difference < 7) {
+      weeklyVolume[date.weekday] = (weeklyVolume[date.weekday] ?? 0) + volume;
+    }
+  }
+
+  return {
+    'monthlyDays': daysWorkedOutThisMonth,
+    'maxVolume': maxVolume,
+    'weeklyVolume': weeklyVolume,
   };
 });

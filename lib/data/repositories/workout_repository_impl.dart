@@ -70,4 +70,10 @@ class WorkoutRepositoryImpl implements IWorkoutRepository {
       'routine_name': routineName,
     });
   }
+
+  @override
+  Future<List<Map<String, dynamic>>> getAllWorkouts() async {
+    final db = await _dbHelper.database;
+    return await db.query('workouts', orderBy: 'date DESC');
+  }
 }

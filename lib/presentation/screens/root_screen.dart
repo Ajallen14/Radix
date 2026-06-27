@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:radix/presentation/screens/analytics_screen.dart';
 import '../providers/core_providers.dart';
 import 'home_screen.dart';
 import 'active_workout_screen.dart';
@@ -14,17 +15,11 @@ class RootScreen extends ConsumerWidget {
     final screens = [
       const HomeScreen(),
       const ActiveWorkoutScreen(),
-      const Center(
-        child: Text(
-          'Analytics Screen (Coming Soon)',
-          style: TextStyle(color: Colors.white),
-        ),
-      ),
+      const AnalyticsScreen(),
     ];
 
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
-      // Prevent the nav bar from jumping up when the keyboard opens
       resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
@@ -35,7 +30,7 @@ class RootScreen extends ConsumerWidget {
           Positioned(
             left: 0,
             right: 0,
-            bottom: 30, // Locked exactly 30 pixels above the bottom safe area
+            bottom: 30,
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -47,7 +42,7 @@ class RootScreen extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(40),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.5),
+                        color: Colors.black.withValues(alpha: 0.5),
                         blurRadius: 15,
                         offset: const Offset(0, 5),
                       ),
