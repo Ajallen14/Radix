@@ -21,14 +21,14 @@ class DatabaseHelper {
 
     return await openDatabase(
       path, 
-      version: 2,
+      version: 3, 
       onCreate: _onCreate,
-      onUpgrade: _onUpgrade,
+      onUpgrade: _onUpgrade, 
     );
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    // Table for the custom routine templates
+    // 1. Table for custom routines
     await db.execute('''
       CREATE TABLE routines(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,7 +38,7 @@ class DatabaseHelper {
       )
     ''');
 
-    // Table for the overall daily session
+    // 2. Table for daily sessions
     await db.execute('''
       CREATE TABLE workouts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,7 +47,7 @@ class DatabaseHelper {
       )
     ''');
 
-    // Table for the individual completed sets
+    // 3. Table for completed sets
     await db.execute('''
       CREATE TABLE sets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,9 +59,16 @@ class DatabaseHelper {
         FOREIGN KEY (workout_id) REFERENCES workouts (id) ON DELETE CASCADE
       )
     ''');
+
+    // 4. Table for weekly schedule
+    await db.execute('''
+      CREATE TABLE weekly_schedule(
+        day INTEGER PRIMARY KEY,
+        focus TEXT
+      )
+    ''');
   }
 
-  // 3. Safely creates the missing table for existing users
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute('''
@@ -70,6 +77,15 @@ class DatabaseHelper {
           title TEXT,
           volume TEXT,
           category TEXT
+        )
+      ''');
+    }
+    
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS weekly_schedule(
+          day INTEGER PRIMARY KEY,
+          focus TEXT
         )
       ''');
     }
@@ -88,4 +104,4 @@ class DatabaseHelper {
       whereArgs: [workoutId],
     );
   }
-}
+} 

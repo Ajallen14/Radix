@@ -35,7 +35,6 @@ class AnalyticsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
 
-              // Handle loading/error states for the stats
               statsAsync.when(
                 loading: () => const Center(
                   child: CircularProgressIndicator(color: Color(0xFFA4EB3F)),
@@ -54,6 +53,8 @@ class AnalyticsScreen extends ConsumerWidget {
                       stats['monthlyDays'] as int,
                       stats['maxVolume'] as double,
                     ),
+                    const SizedBox(height: 24),
+                    _buildWeeklySplitPlanner(context, ref),
                   ],
                 ),
               ),
@@ -69,7 +70,6 @@ class AnalyticsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
 
-              // Handle loading/error states for the list
               recentAsync.when(
                 loading: () => const SizedBox.shrink(),
                 error: (err, stack) => const SizedBox.shrink(),
@@ -82,11 +82,8 @@ class AnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  // ==========================================
-  // 1. WEEKLY ACTIVITY CHART
-  // ==========================================
+  // WEEKLY ACTIVITY CHART
   Widget _buildWeeklyChart(Map<int, double> weeklyData) {
-    // Determine the highest volume to scale the chart dynamically
     final maxChartY = weeklyData.values.isEmpty
         ? 1000.0
         : weeklyData.values.reduce((curr, next) => curr > next ? curr : next) *
@@ -110,7 +107,7 @@ class AnalyticsScreen extends ConsumerWidget {
           Expanded(
             child: BarChart(
               BarChartData(
-                maxY: maxChartY == 0 ? 100 : maxChartY, // Fallback if no data
+                maxY: maxChartY == 0 ? 100 : maxChartY,
                 titlesData: FlTitlesData(
                   show: true,
                   topTitles: const AxisTitles(
@@ -126,10 +123,10 @@ class AnalyticsScreen extends ConsumerWidget {
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
-                        // Map the integer (1-7) to the day of the week
                         const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-                        if (value.toInt() < 1 || value.toInt() > 7)
+                        if (value.toInt() < 1 || value.toInt() > 7) {
                           return const Text('');
+                        }
                         return Padding(
                           padding: const EdgeInsets.only(top: 8.0),
                           child: Text(
@@ -148,10 +145,10 @@ class AnalyticsScreen extends ConsumerWidget {
                 gridData: const FlGridData(show: false),
                 barGroups: weeklyData.entries.map((entry) {
                   return BarChartGroupData(
-                    x: entry.key, // Day of the week (1-7)
+                    x: entry.key,
                     barRods: [
                       BarChartRodData(
-                        toY: entry.value, // Volume lifted
+                        toY: entry.value,
                         width: 16,
                         gradient: const LinearGradient(
                           colors: [Color(0xFFA4EB3F), Color(0xFF6DA026)],
@@ -162,7 +159,7 @@ class AnalyticsScreen extends ConsumerWidget {
                         backDrawRodData: BackgroundBarChartRodData(
                           show: true,
                           toY: maxChartY == 0 ? 100 : maxChartY,
-                          color: Colors.white.withOpacity(0.05),
+                          color: Colors.white.withValues(alpha: 0.05),
                         ),
                       ),
                     ],
@@ -176,9 +173,7 @@ class AnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  // ==========================================
-  // 2. METRIC CARDS
-  // ==========================================
+  // METRIC CARDS
   Widget _buildMetricCards(int monthlyDays, double maxVolume) {
     return Row(
       children: [
@@ -193,9 +188,7 @@ class AnalyticsScreen extends ConsumerWidget {
         Expanded(
           child: _metricCard(
             title: 'Max Volume (kg)',
-            value: maxVolume.toStringAsFixed(
-              0,
-            ), // Drop the decimals for cleaner UI
+            value: maxVolume.toStringAsFixed(0),
             icon: Icons.fitness_center_rounded,
           ),
         ),
@@ -237,9 +230,7 @@ class AnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  // ==========================================
-  // 3. RECENT WORKOUTS LIST
-  // ==========================================
+  // RECENT WORKOUTS LIST
   Widget _buildRecentWorkoutsList(List<Map<String, dynamic>> workouts) {
     if (workouts.isEmpty) {
       return const Center(
@@ -295,6 +286,256 @@ class AnalyticsScreen extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+
+  // WEEKLY SPLIT PLANNER
+  Widget _buildWeeklySplitPlanner(BuildContext context, WidgetRef ref) {
+    final schedule = ref.watch(weeklyScheduleProvider);
+    const days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2A2A2A),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'My Weekly Split',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ...List.generate(7, (index) {
+            final dayNumber = index + 1;
+            final currentFocus = schedule[dayNumber] ?? 'Rest';
+            final isRestDay = currentFocus == 'Rest';
+
+            return GestureDetector(
+              onTap: () =>
+                  _showFocusPicker(context, ref, dayNumber, days[index]),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A1A1A),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isRestDay
+                        ? Colors.transparent
+                        : const Color(0xFFA4EB3F).withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      days[index],
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              currentFocus,
+                              textAlign: TextAlign.right,
+                              overflow: TextOverflow
+                                  .ellipsis, // Protects against super long combinations
+                              style: TextStyle(
+                                color: isRestDay
+                                    ? Colors.white38
+                                    : const Color(0xFFA4EB3F),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.edit_calendar_rounded,
+                            color: Colors.white38,
+                            size: 16,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  void _showFocusPicker(
+    BuildContext context,
+    WidgetRef ref,
+    int dayNumber,
+    String dayName,
+  ) {
+    final options = [
+      'Chest',
+      'Back',
+      'Arms',
+      'Legs',
+      'Shoulders',
+      'Core',
+      'Full Body',
+    ];
+
+    final currentFocusString =
+        ref.read(weeklyScheduleProvider)[dayNumber] ?? 'Rest';
+    Set<String> selectedOptions = currentFocusString == 'Rest'
+        ? {}
+        : currentFocusString.split(' & ').toSet();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Set focus for $dayName',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ...options.map((option) {
+                      final isSelected = selectedOptions.contains(option);
+
+                      return FilterChip(
+                        label: Text(option),
+                        selected: isSelected,
+                        backgroundColor: const Color(0xFF2A2A2A),
+                        selectedColor: const Color(0xFFA4EB3F),
+                        checkmarkColor: Colors.black,
+                        labelStyle: TextStyle(
+                          color: isSelected ? Colors.black : Colors.white,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                        onSelected: (selected) {
+                          setState(() {
+                            if (option == 'Full Body') {
+                              selectedOptions = {'Full Body'};
+                            } else {
+                              selectedOptions.remove('Full Body');
+                              if (selected) {
+                                selectedOptions.add(option);
+                              } else {
+                                selectedOptions.remove(option);
+                              }
+                            }
+                          });
+                        },
+                      );
+                    }),
+
+                    // Explicit Rest Chip
+                    FilterChip(
+                      label: const Text('Rest'),
+                      selected: selectedOptions.isEmpty,
+                      backgroundColor: const Color(0xFF2A2A2A),
+                      selectedColor: const Color(0xFFA4EB3F),
+                      checkmarkColor: Colors.black,
+                      labelStyle: TextStyle(
+                        color: selectedOptions.isEmpty
+                            ? Colors.black
+                            : Colors.white,
+                        fontWeight: selectedOptions.isEmpty
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                      onSelected: (selected) {
+                        setState(() {
+                          selectedOptions.clear();
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 32),
+
+                // Save Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFA4EB3F),
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    onPressed: () {
+                      final newFocus = selectedOptions.isEmpty
+                          ? 'Rest'
+                          : selectedOptions.join(' & ');
+
+                      ref
+                          .read(weeklyScheduleProvider.notifier)
+                          .updateFocus(dayNumber, newFocus);
+                      Navigator.pop(context);
+                    },
+                    child: const Text(
+                      'Save Split',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }

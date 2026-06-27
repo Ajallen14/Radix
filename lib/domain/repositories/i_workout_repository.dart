@@ -13,4 +13,8 @@ abstract class IWorkoutRepository {
   
   // Analytics Methods
   Future<double> calculateTotalVolumeForSession(int workoutId);
+
+  // Weekly Schedule Methods
+  Future<Map<int, String>> getWeeklySchedule();
+  Future<void> updateDailyFocus(int day, String focus);
 }

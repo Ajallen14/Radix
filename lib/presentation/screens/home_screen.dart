@@ -22,7 +22,7 @@ class HomeScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeroCard(),
+              _buildHeroCard(ref),
               const SizedBox(height: 32),
               _buildDateScroller(),
               const SizedBox(height: 32),
@@ -38,47 +38,66 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeroCard() {
+  Widget _buildHeroCard(WidgetRef ref) {
+    final schedule = ref.watch(weeklyScheduleProvider);
+    final today = DateTime.now().weekday;
+    
+    String focusTitle;
+    String subtitle;
+    bool isRestOrEmpty = false;
+
+    if (schedule.isEmpty) {
+      // First time opening the app / no schedule set
+      focusTitle = "Plan Your Week";
+      subtitle = "Tap Analytics to set your split";
+      isRestOrEmpty = true;
+    } else if (schedule[today] == null || schedule[today] == 'Rest') {
+      focusTitle = "Rest Day";
+      subtitle = "Recovery is just as important";
+      isRestOrEmpty = true;
+    } else {
+      focusTitle = schedule[today]!;
+      subtitle = "Today's Focus";
+    }
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: const Color(0xFFA4EB3F),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(32),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Today\'s Focus',
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
+          Text(
+            subtitle,
+            style: const TextStyle(color: Colors.black54, fontSize: 16, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Chest & Shoulders',
-            style: TextStyle(color: Colors.black87, fontSize: 16),
+          Text(
+            focusTitle,
+            style: const TextStyle(color: Colors.black, fontSize: 36, fontWeight: FontWeight.bold, height: 1.1),
           ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1A1A1A),
-              foregroundColor: const Color(0xFFA4EB3F),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
+          const SizedBox(height: 24),
+          
+          if (!isRestOrEmpty)
+            ElevatedButton(
+              onPressed: () {
+                ref.read(bottomNavIndexProvider.notifier).state = 1; 
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                foregroundColor: const Color(0xFFA4EB3F),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               ),
+              child: const Text('Start Session', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
-            child: const Text('Start Workout'),
-          ),
         ],
       ),
     );
   }
-
   Widget _buildDateScroller() {
     final now = DateTime.now();
     // Calculate the Monday of the current week

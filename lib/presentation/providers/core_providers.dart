@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/legacy.dart';
 import '../../data/datasources/database_helper.dart';
 import '../../data/repositories/workout_repository_impl.dart';
 import '../../domain/repositories/i_workout_repository.dart';
-import 'package:intl/intl.dart';
 
 // 1. DATA MODELS
 class RoutineTemplate {
@@ -168,4 +167,27 @@ final analyticsStatsProvider = FutureProvider<Map<String, dynamic>>((
     'maxVolume': maxVolume,
     'weeklyVolume': weeklyVolume,
   };
+});
+
+// WEEKLY SCHEDULE PLANNER
+class WeeklyScheduleNotifier extends StateNotifier<Map<int, String>> {
+  final IWorkoutRepository repository;
+
+  WeeklyScheduleNotifier(this.repository) : super({}) {
+    _loadSchedule();
+  }
+
+  Future<void> _loadSchedule() async {
+    state = await repository.getWeeklySchedule();
+  }
+
+  Future<void> updateFocus(int day, String focus) async {
+    await repository.updateDailyFocus(day, focus);
+    await _loadSchedule();
+  }
+}
+
+final weeklyScheduleProvider = StateNotifierProvider<WeeklyScheduleNotifier, Map<int, String>>((ref) {
+  final repository = ref.watch(workoutRepositoryProvider);
+  return WeeklyScheduleNotifier(repository);
 });
