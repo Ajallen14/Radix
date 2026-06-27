@@ -128,17 +128,15 @@ final recentWorkoutsProvider = FutureProvider<List<Map<String, dynamic>>>((
 });
 
 // Processes the data into specific metrics
-final analyticsStatsProvider = FutureProvider<Map<String, dynamic>>((
-  ref,
-) async {
+final analyticsStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final repository = ref.watch(workoutRepositoryProvider);
   final workouts = await ref.watch(recentWorkoutsProvider.future);
 
+  Set<String> allActiveDates = {};
   int daysWorkedOutThisMonth = 0;
   double maxVolume = 0.0;
   final now = DateTime.now();
 
-  // Create a map
   Map<int, double> weeklyVolume = {
     for (var i = 6; i >= 0; i--) now.subtract(Duration(days: i)).weekday: 0.0,
   };
@@ -147,7 +145,8 @@ final analyticsStatsProvider = FutureProvider<Map<String, dynamic>>((
     final date = DateTime.parse(workout['date']);
     final workoutId = workout['id'] as int;
 
-    // Calculate Monthly Days
+    allActiveDates.add('${date.year}-${date.month}-${date.day}');
+
     if (date.month == now.month && date.year == now.year) {
       daysWorkedOutThisMonth++;
     }
@@ -156,8 +155,9 @@ final analyticsStatsProvider = FutureProvider<Map<String, dynamic>>((
     final volume = await repository.calculateTotalVolumeForSession(workoutId);
     if (volume > maxVolume) maxVolume = volume;
 
+    // Add to Weekly Chart
     final difference = now.difference(date).inDays;
-    if (difference < 7) {
+    if (difference < 7 && difference >= 0) {
       weeklyVolume[date.weekday] = (weeklyVolume[date.weekday] ?? 0) + volume;
     }
   }
@@ -166,6 +166,7 @@ final analyticsStatsProvider = FutureProvider<Map<String, dynamic>>((
     'monthlyDays': daysWorkedOutThisMonth,
     'maxVolume': maxVolume,
     'weeklyVolume': weeklyVolume,
+    'allActiveDates': allActiveDates,
   };
 });
 

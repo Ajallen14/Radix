@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:intl/intl.dart';
 import '../providers/core_providers.dart';
+
+final viewedMonthProvider = StateProvider<DateTime>((ref) {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month);
+});
 
 class AnalyticsScreen extends ConsumerWidget {
   const AnalyticsScreen({super.key});
@@ -52,6 +58,11 @@ class AnalyticsScreen extends ConsumerWidget {
                     _buildMetricCards(
                       stats['monthlyDays'] as int,
                       stats['maxVolume'] as double,
+                    ),
+                    const SizedBox(height: 24),
+                    _buildMonthlyCalendar(
+                      stats['allActiveDates'] as Set<String>,
+                      ref,
                     ),
                     const SizedBox(height: 24),
                     _buildWeeklySplitPlanner(context, ref),
@@ -230,62 +241,138 @@ class AnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  // RECENT WORKOUTS LIST
-  Widget _buildRecentWorkoutsList(List<Map<String, dynamic>> workouts) {
-    if (workouts.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.only(top: 20),
-          child: Text(
-            'No sessions recorded yet.',
-            style: TextStyle(color: Colors.white54),
-          ),
-        ),
-      );
-    }
+  // MONTHLY CONSISTENCY GRID
+  Widget _buildMonthlyCalendar(Set<String> allActiveDates, WidgetRef ref) {
+    final viewedMonth = ref.watch(viewedMonthProvider);
+    final now = DateTime.now();
 
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: workouts.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final workout = workouts[index];
-        final date = DateTime.parse(workout['date']);
-        final formattedDate = DateFormat('MMM d, yyyy • h:mm a').format(date);
+    final daysInMonth = DateTime(
+      viewedMonth.year,
+      viewedMonth.month + 1,
+      0,
+    ).day;
+    final currentMonthName = DateFormat('MMMM yyyy').format(viewedMonth);
+    final isCurrentMonth =
+        viewedMonth.year == now.year && viewedMonth.month == now.month;
 
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF2A2A2A),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2A2A2A),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const Expanded(
+                child: Text(
+                  'Consistency Grid',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Row(
                 children: [
-                  Text(
-                    workout['routine_name'],
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                  IconButton(
+                    constraints: const BoxConstraints(),
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(Icons.chevron_left, color: Colors.white54),
+                    onPressed: () {
+                      ref
+                          .read(viewedMonthProvider.notifier)
+                          .update(
+                            (state) => DateTime(state.year, state.month - 1),
+                          );
+                    },
+                  ),
+                  SizedBox(
+                    width: 110,
+                    child: Text(
+                      currentMonthName,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    formattedDate,
-                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  IconButton(
+                    constraints: const BoxConstraints(),
+                    padding: EdgeInsets.zero,
+                    icon: Icon(
+                      Icons.chevron_right,
+                      color: isCurrentMonth
+                          ? Colors.transparent
+                          : Colors.white54,
+                    ),
+                    onPressed: isCurrentMonth
+                        ? null
+                        : () {
+                            ref
+                                .read(viewedMonthProvider.notifier)
+                                .update(
+                                  (state) =>
+                                      DateTime(state.year, state.month + 1),
+                                );
+                          },
                   ),
                 ],
               ),
-              const Icon(Icons.chevron_right_rounded, color: Colors.white38),
             ],
           ),
-        );
-      },
+          const SizedBox(height: 16),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
+            itemCount: daysInMonth,
+            itemBuilder: (context, index) {
+              final dayNumber = index + 1;
+              final dateString =
+                  '${viewedMonth.year}-${viewedMonth.month}-$dayNumber';
+              final isActive = allActiveDates.contains(dateString);
+              final isToday =
+                  dayNumber == now.day &&
+                  viewedMonth.month == now.month &&
+                  viewedMonth.year == now.year;
+
+              return Container(
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? const Color(0xFFA4EB3F)
+                      : const Color(0xFF1A1A1A),
+                  borderRadius: BorderRadius.circular(8),
+                  border: isToday
+                      ? Border.all(color: Colors.white, width: 1.5)
+                      : null,
+                ),
+                child: Center(
+                  child: Text(
+                    dayNumber.toString(),
+                    style: TextStyle(
+                      color: isActive ? Colors.black : Colors.white54,
+                      fontWeight: isActive || isToday
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -362,8 +449,7 @@ class AnalyticsScreen extends ConsumerWidget {
                             child: Text(
                               currentFocus,
                               textAlign: TextAlign.right,
-                              overflow: TextOverflow
-                                  .ellipsis, // Protects against super long combinations
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: isRestDay
                                     ? Colors.white38
@@ -474,7 +560,6 @@ class AnalyticsScreen extends ConsumerWidget {
                       );
                     }),
 
-                    // Explicit Rest Chip
                     FilterChip(
                       label: const Text('Rest'),
                       selected: selectedOptions.isEmpty,
@@ -499,7 +584,6 @@ class AnalyticsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 32),
 
-                // Save Button
                 SizedBox(
                   width: double.infinity,
                   height: 56,
@@ -515,7 +599,6 @@ class AnalyticsScreen extends ConsumerWidget {
                       final newFocus = selectedOptions.isEmpty
                           ? 'Rest'
                           : selectedOptions.join(' & ');
-
                       ref
                           .read(weeklyScheduleProvider.notifier)
                           .updateFocus(dayNumber, newFocus);
@@ -536,6 +619,65 @@ class AnalyticsScreen extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+
+  // RECENT WORKOUTS LIST
+  Widget _buildRecentWorkoutsList(List<Map<String, dynamic>> workouts) {
+    if (workouts.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.only(top: 20),
+          child: Text(
+            'No sessions recorded yet.',
+            style: TextStyle(color: Colors.white54),
+          ),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: workouts.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final workout = workouts[index];
+        final date = DateTime.parse(workout['date']);
+        final formattedDate = DateFormat('MMM d, yyyy • h:mm a').format(date);
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2A2A2A),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    workout['routine_name'],
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    formattedDate,
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                ],
+              ),
+              const Icon(Icons.chevron_right_rounded, color: Colors.white38),
+            ],
+          ),
+        );
+      },
     );
   }
 }
