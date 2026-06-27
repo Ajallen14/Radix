@@ -2,8 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:radix/presentation/providers/core_providers.dart';
 import 'package:radix/presentation/providers/timer_provider.dart';
-import '../providers/core_providers.dart';
 
 final isWorkoutActiveProvider = StateProvider<bool>((ref) => false);
 final isRestTimerActiveProvider = StateProvider<bool>((ref) => false);
@@ -16,6 +16,7 @@ final completedSetsProvider = StateProvider<Set<String>>((ref) => {});
 class ActiveWorkoutScreen extends ConsumerWidget {
   const ActiveWorkoutScreen({super.key});
 
+  @override
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isActive = ref.watch(isWorkoutActiveProvider);
@@ -37,7 +38,7 @@ class ActiveWorkoutScreen extends ConsumerWidget {
             // Rest Timer Overlay
             if (isTimerActive)
               Positioned(
-                bottom: 130,
+                bottom: 110,
                 left: 20,
                 right: 20,
                 child: _buildGlassmorphicTimer(ref),
@@ -398,9 +399,20 @@ class ActiveWorkoutScreen extends ConsumerWidget {
                     ref
                         .read(completedSetsProvider.notifier)
                         .update((state) => <String>{...state, uniqueSetId});
-                    ref.read(isRestTimerActiveProvider.notifier).state = true;
 
-                    ref.read(restTimerProvider.notifier).start(10);
+                    // Start the Rest Timer
+                    ref.read(isRestTimerActiveProvider.notifier).state = true;
+                    ref.read(restTimerProvider.notifier).start(90);
+
+                    // SAVE TO DATABASE
+                    final weightValue = double.tryParse(weight) ?? 0.0;
+                    final repsValue = int.tryParse(reps) ?? 0;
+                    ref.read(saveSetProvider)(
+                      1,
+                      exerciseName,
+                      weightValue,
+                      repsValue,
+                    );
                   } else {
                     ref.read(completedSetsProvider.notifier).update((state) {
                       final newState = <String>{...state};

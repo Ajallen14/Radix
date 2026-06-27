@@ -10,6 +10,7 @@ class RootScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(bottomNavIndexProvider);
+
     final screens = [
       const HomeScreen(),
       const ActiveWorkoutScreen(),
@@ -23,22 +24,21 @@ class RootScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
+      // Prevent the nav bar from jumping up when the keyboard opens
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
+          // The Main Content Layer
           screens[currentIndex],
 
-          // Floating Navigation Pill
+          // The Floating Navigation Pill Layer
           Positioned(
             left: 0,
             right: 0,
-            bottom: 0,
+            bottom: 30, // Locked exactly 30 pixels above the bottom safe area
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.only(
-                  left: 24.0,
-                  right: 24.0,
-                  bottom: 20.0,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Container(
                   height: 72,
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),

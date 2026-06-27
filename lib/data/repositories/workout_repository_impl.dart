@@ -1,3 +1,4 @@
+import 'package:radix/presentation/providers/core_providers.dart';
 import '../../domain/repositories/i_workout_repository.dart';
 import '../datasources/database_helper.dart';
 import '../models/workout_set_model.dart';
@@ -7,10 +8,36 @@ class WorkoutRepositoryImpl implements IWorkoutRepository {
 
   WorkoutRepositoryImpl(this._dbHelper);
 
+  //Routine Methods
+
+  @override
+  Future<List<RoutineTemplate>> getRoutines() async {
+    final db = await _dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query('routines');
+    return List.generate(maps.length, (i) => RoutineTemplate.fromMap(maps[i]));
+  }
+
+  @override
+  Future<void> saveRoutine(RoutineTemplate routine) async {
+    final db = await _dbHelper.database;
+    await db.insert('routines', routine.toMap());
+  }
+
+  @override
+  Future<void> deleteRoutine(int id) async {
+    final db = await _dbHelper.database;
+    await db.delete('routines', where: 'id = ?', whereArgs: [id]);
+  }
+
+  //Set & Volume Methods
+
   @override
   Future<void> saveCompletedSet(
-      int workoutId, String exercise, double weight, int reps) async {
-    
+    int workoutId,
+    String exercise,
+    double weight,
+    int reps,
+  ) async {
     final newSet = WorkoutSetModel(
       workoutId: workoutId,
       exerciseName: exercise,
@@ -22,16 +49,15 @@ class WorkoutRepositoryImpl implements IWorkoutRepository {
     await _dbHelper.insertSet(newSet.toMap());
   }
 
-  @override
   Future<double> calculateTotalVolumeForSession(int workoutId) async {
     final setsData = await _dbHelper.getSetsForWorkout(workoutId);
     double totalVolume = 0;
-    
+
     for (var map in setsData) {
       final workoutSet = WorkoutSetModel.fromMap(map);
       totalVolume += (workoutSet.weight * workoutSet.reps);
     }
-    
+
     return totalVolume;
   }
 }

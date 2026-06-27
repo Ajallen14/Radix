@@ -1,33 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:radix/presentation/widgets/add_workout_sheet.dart';
 import '../providers/core_providers.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
+  @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.only(
-          left: 20.0,
-          right: 20.0,
-          top: 20.0,
-          bottom: 120.0,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeroCard(),
-            const SizedBox(height: 32),
-            _buildDateScroller(),
-            const SizedBox(height: 32),
-            _buildRoutinesHeader(),
-            const SizedBox(height: 16),
-            _buildCategoryFilters(),
-            const SizedBox(height: 24),
-            _buildRoutinesGrid(ref), // Pass ref here to read dynamic routines
-          ],
+    return Scaffold(
+      backgroundColor: const Color(0xFF1A1A1A),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(
+            left: 20.0,
+            right: 20.0,
+            top: 20.0,
+            bottom: 120.0,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeroCard(),
+              const SizedBox(height: 32),
+              _buildDateScroller(),
+              const SizedBox(height: 32),
+              _buildRoutinesHeader(),
+              const SizedBox(height: 16),
+              _buildCategoryFilters(ref),
+              const SizedBox(height: 24),
+              _buildRoutinesGrid(context, ref),
+            ],
+          ),
         ),
       ),
     );
@@ -155,30 +160,40 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCategoryFilters() {
-    final categories = ['All Type', 'Chest', 'Arms', 'Core', 'Legs'];
+  Widget _buildCategoryFilters(WidgetRef ref) {
+    final categories = ['All Type', 'Chest', 'Arms', 'Back', 'Legs', 'Core'];
+    final activeFilter = ref.watch(selectedFilterProvider);
+
     return SizedBox(
       height: 40,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: categories.length,
         itemBuilder: (context, index) {
-          final isSelected = index == 0;
-          return Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? const Color(0xFFA4EB3F)
-                  : const Color(0xFF2A2A2A),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              categories[index],
-              style: TextStyle(
-                color: isSelected ? Colors.black : Colors.white,
-                fontWeight: FontWeight.bold,
+          final category = categories[index];
+          final isSelected = activeFilter == category;
+
+          return GestureDetector(
+            onTap: () {
+              ref.read(selectedFilterProvider.notifier).state = category;
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? const Color(0xFFA4EB3F)
+                    : const Color(0xFF2A2A2A),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                category,
+                style: TextStyle(
+                  color: isSelected ? Colors.black : Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           );
@@ -187,15 +202,19 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRoutinesGrid(WidgetRef ref) {
-    // Read the dynamic list from Riverpod
-    final routines = ref.watch(routinesProvider);
+  Widget _buildRoutinesGrid(BuildContext context, WidgetRef ref) {
+    final allRoutines = ref.watch(routinesProvider);
+    final activeFilter = ref.watch(selectedFilterProvider);
+    final displayedRoutines = activeFilter == 'All Type'
+        ? allRoutines
+        : allRoutines
+              .where((routine) => routine.category == activeFilter)
+              .toList();
 
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      // Add 1 to itemCount to account for the "Add Workout" button at the end
-      itemCount: routines.length + 1,
+      itemCount: displayedRoutines.length + 1,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 16,
@@ -203,75 +222,152 @@ class HomeScreen extends ConsumerWidget {
         childAspectRatio: 1.4,
       ),
       itemBuilder: (context, index) {
-        // If we are at the end of the list, render the Add button
-        if (index == routines.length) {
-          return _buildAddWorkoutCard();
+        if (index == displayedRoutines.length) {
+          return _buildAddWorkoutCard(context);
         }
 
-        // Otherwise, render the dynamic routine card
-        final routine = routines[index];
-        return _routineCard(
-          routine.title,
-          routine.volume,
-          routine.gradientColors,
-        );
+        final routine = displayedRoutines[index];
+        final originalIndex = allRoutines.indexOf(routine);
+
+        return _routineCard(context, ref, originalIndex, routine);
       },
     );
   }
 
-  Widget _routineCard(String title, String volume, List<Color> gradientColors) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: gradientColors,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+  Widget _routineCard(
+    BuildContext context,
+    WidgetRef ref,
+    int index,
+    RoutineTemplate routine,
+  ) {
+    // 1. Define your 5 premium gradients
+    final List<List<Color>> cardGradients = [
+      const [Color(0xFF2B5876), Color(0xFF4E4376)],
+      const [Color(0xFF1D4350), Color(0xFF041115)],
+      const [Color(0xFF870000), Color(0xFF190A05)],
+      const [Color(0xFF432B76), Color(0xFF2A0845)],
+      const [Color(0xFF0F2027), Color(0xFF203A43)],
+    ];
+
+    // Cycle through the gradients based on the index
+    final gradientColors = cardGradients[index % cardGradients.length];
+
+    return GestureDetector(
+      onLongPress: () {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: const Color(0xFF2A2A2A),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
+            title: const Text(
+              'Delete Workout?',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: Text(
+              'Are you sure you want to delete "${routine.title}"?',
+              style: const TextStyle(color: Colors.white70),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: Colors.white54),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  if (routine.id != null) {
+                    ref
+                        .read(routinesProvider.notifier)
+                        .deleteRoutine(routine.id!);
+                  }
+                  Navigator.pop(context);
+                },
+                child: const Text(
+                  'Delete',
+                  style: TextStyle(
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            volume,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: gradientColors,
           ),
-        ],
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              routine.title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              routine.volume,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildAddWorkoutCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF2A2A2A),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.grey.withValues(alpha: 0.3),
-          style: BorderStyle.solid,
+  Widget _buildAddWorkoutCard(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (context) => const AddWorkoutSheet(),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF2A2A2A),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Colors.grey.withValues(alpha: 0.3),
+            style: BorderStyle.solid,
+          ),
         ),
-      ),
-      child: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.add_circle_outline, color: Color(0xFFA4EB3F), size: 32),
-            SizedBox(height: 8),
-            Text('Add Workout', style: TextStyle(color: Colors.white)),
-          ],
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.add_circle_outline,
+                color: Color(0xFFA4EB3F),
+                size: 32,
+              ),
+              SizedBox(height: 8),
+              Text('Add Workout', style: TextStyle(color: Colors.white)),
+            ],
+          ),
         ),
       ),
     );

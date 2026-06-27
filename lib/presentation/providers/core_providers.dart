@@ -1,11 +1,48 @@
-import 'dart:ui';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../../data/datasources/database_helper.dart';
 import '../../data/repositories/workout_repository_impl.dart';
 import '../../domain/repositories/i_workout_repository.dart';
 
+// 1. DATA MODELS
+class RoutineTemplate {
+  final int? id;
+  final String title;
+  final String volume;
+  final String category;
+
+  RoutineTemplate({
+    this.id,
+    required this.title,
+    required this.volume,
+    required this.category,
+  });
+
+  Map<String, dynamic> toMap() {
+    final map = <String, dynamic>{
+      'title': title,
+      'volume': volume,
+      'category': category,
+    };
+
+    if (id != null) {
+      map['id'] = id;
+    }
+
+    return map;
+  }
+
+  factory RoutineTemplate.fromMap(Map<String, dynamic> map) {
+    return RoutineTemplate(
+      id: map['id'],
+      title: map['title'],
+      volume: map['volume'],
+      category: map['category'],
+    );
+  }
+}
+
+// 2. DATABASE & REPOSITORY PROVIDERS
 // Provide SQLite database helper
 final databaseHelperProvider = Provider<DatabaseHelper>((ref) {
   return DatabaseHelper();
@@ -17,32 +54,53 @@ final workoutRepositoryProvider = Provider<IWorkoutRepository>((ref) {
   return WorkoutRepositoryImpl(dbHelper);
 });
 
-// Manage the state of the Bottom Navigation Bar
-final bottomNavIndexProvider = StateProvider<int>((ref) => 0);
+// 3. ROUTINE MANAGEMENT
+class RoutinesNotifier extends StateNotifier<List<RoutineTemplate>> {
+  final IWorkoutRepository repository;
 
-class RoutineTemplate {
-  final String title;
-  final String volume;
-  final List<Color> gradientColors;
+  RoutinesNotifier(this.repository) : super([]) {
+    _loadRoutines();
+  }
 
-  RoutineTemplate(this.title, this.volume, this.gradientColors);
+  Future<void> _loadRoutines() async {
+    state = await repository.getRoutines();
+  }
+
+  Future<void> addRoutine(RoutineTemplate routine) async {
+    await repository.saveRoutine(routine);
+    await _loadRoutines();
+  }
+
+  Future<void> deleteRoutine(int id) async {
+    await repository.deleteRoutine(id);
+    await _loadRoutines();
+  }
 }
 
-final routinesProvider = StateProvider<List<RoutineTemplate>>((ref) {
-  return [
-    RoutineTemplate('Chest Program', '4 Sets • 20 Reps', const [
-      Color(0xFF2B5876),
-      Color(0xFF4E4376),
-    ]),
-    RoutineTemplate('Arms Program', '3 Sets • 12 Reps', const [
-      Color(0xFF1D4350),
-      Color(0xFF041115),
-    ]),
-  ];
-});
+// The updated Provider for Routines
+final routinesProvider =
+    StateNotifierProvider<RoutinesNotifier, List<RoutineTemplate>>((ref) {
+      final repository = ref.watch(workoutRepositoryProvider);
+      return RoutinesNotifier(repository);
+    });
 
-// Toggles between the Setup phase and the Active Tracking phase
+// 4. UI STATE PROVIDERS
+final selectedFilterProvider = StateProvider<String>((ref) => 'All Type');
+final bottomNavIndexProvider = StateProvider<int>((ref) => 0);
 final isWorkoutActiveProvider = StateProvider<bool>((ref) => false);
-
-// Toggles the visibility of the floating rest timer
 final isRestTimerActiveProvider = StateProvider<bool>((ref) => false);
+
+// 5. WORKOUT ACTIONS
+final saveSetProvider = Provider((ref) {
+  final repository = ref.watch(workoutRepositoryProvider);
+  return (int workoutId, String exerciseName, double weight, int reps) async {
+    try {
+      await repository.saveCompletedSet(workoutId, exerciseName, weight, reps);
+      print(
+        'Saved to SQLite: $exerciseName - $weight kg x $reps',
+      );
+    } catch (e) {
+      print('Failed to save set: $e');
+    }
+  };
+});
