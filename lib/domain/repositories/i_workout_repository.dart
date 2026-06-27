@@ -5,6 +5,7 @@ abstract class IWorkoutRepository {
   Future<List<RoutineTemplate>> getRoutines();
   Future<void> saveRoutine(RoutineTemplate routine);
   Future<void> deleteRoutine(int id);
+  Future<List<RoutineTemplate>> getRoutinesByCategory(String category);
   
   // Set & Session Methods
   Future<void> saveCompletedSet(int workoutId, String exerciseName, double weight, int reps);

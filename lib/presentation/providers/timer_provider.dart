@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:radix/presentation/providers/core_providers.dart';
 import 'package:vibration/vibration.dart';
 
 import '../screens/active_workout_screen.dart';

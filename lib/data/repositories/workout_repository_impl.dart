@@ -6,10 +6,7 @@ import '../models/workout_set_model.dart';
 
 class WorkoutRepositoryImpl implements IWorkoutRepository {
   final DatabaseHelper _dbHelper;
-
   WorkoutRepositoryImpl(this._dbHelper);
-
-  //Routine Methods
 
   @override
   Future<List<RoutineTemplate>> getRoutines() async {
@@ -30,15 +27,19 @@ class WorkoutRepositoryImpl implements IWorkoutRepository {
     await db.delete('routines', where: 'id = ?', whereArgs: [id]);
   }
 
-  //Set & Volume Methods
+  @override
+  Future<List<RoutineTemplate>> getRoutinesByCategory(String category) async {
+    final db = await _dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'routines',
+      where: 'category = ?',
+      whereArgs: [category],
+    );
+    return List.generate(maps.length, (i) => RoutineTemplate.fromMap(maps[i]));
+  }
 
   @override
-  Future<void> saveCompletedSet(
-    int workoutId,
-    String exercise,
-    double weight,
-    int reps,
-  ) async {
+  Future<void> saveCompletedSet(int workoutId, String exercise, double weight, int reps) async {
     final newSet = WorkoutSetModel(
       workoutId: workoutId,
       exerciseName: exercise,
@@ -46,26 +47,23 @@ class WorkoutRepositoryImpl implements IWorkoutRepository {
       reps: reps,
       completedAt: DateTime.now().millisecondsSinceEpoch,
     );
-
     await _dbHelper.insertSet(newSet.toMap());
   }
 
+  @override
   Future<double> calculateTotalVolumeForSession(int workoutId) async {
     final setsData = await _dbHelper.getSetsForWorkout(workoutId);
     double totalVolume = 0;
-
     for (var map in setsData) {
       final workoutSet = WorkoutSetModel.fromMap(map);
       totalVolume += (workoutSet.weight * workoutSet.reps);
     }
-
     return totalVolume;
   }
 
   @override
   Future<int> createWorkoutSession(String routineName) async {
     final db = await _dbHelper.database;
-
     return await db.insert('workouts', {
       'date': DateTime.now().toIso8601String(),
       'routine_name': routineName,

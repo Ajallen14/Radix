@@ -7,7 +7,6 @@ class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
@@ -24,7 +23,7 @@ class HomeScreen extends ConsumerWidget {
             children: [
               _buildHeroCard(ref),
               const SizedBox(height: 32),
-              _buildDateScroller(),
+              _buildDateScroller(ref),
               const SizedBox(height: 32),
               _buildRoutinesHeader(),
               const SizedBox(height: 16),
@@ -41,13 +40,12 @@ class HomeScreen extends ConsumerWidget {
   Widget _buildHeroCard(WidgetRef ref) {
     final schedule = ref.watch(weeklyScheduleProvider);
     final today = DateTime.now().weekday;
-    
+
     String focusTitle;
     String subtitle;
     bool isRestOrEmpty = false;
 
     if (schedule.isEmpty) {
-      // First time opening the app / no schedule set
       focusTitle = "Plan Your Week";
       subtitle = "Tap Analytics to set your split";
       isRestOrEmpty = true;
@@ -72,43 +70,73 @@ class HomeScreen extends ConsumerWidget {
         children: [
           Text(
             subtitle,
-            style: const TextStyle(color: Colors.black54, fontSize: 16, fontWeight: FontWeight.w500),
+            style: const TextStyle(
+              color: Colors.black54,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             focusTitle,
-            style: const TextStyle(color: Colors.black, fontSize: 36, fontWeight: FontWeight.bold, height: 1.1),
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: 36,
+              fontWeight: FontWeight.bold,
+              height: 1.1,
+            ),
           ),
           const SizedBox(height: 24),
-          
+
           if (!isRestOrEmpty)
             ElevatedButton(
               onPressed: () {
-                ref.read(bottomNavIndexProvider.notifier).state = 1; 
+                ref.read(bottomNavIndexProvider.notifier).state = 1;
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
                 foregroundColor: const Color(0xFFA4EB3F),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
               ),
-              child: const Text('Start Session', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Start Session',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
         ],
       ),
     );
   }
-  Widget _buildDateScroller() {
+
+  Widget _buildDateScroller(WidgetRef ref) {
     final now = DateTime.now();
-    // Calculate the Monday of the current week
     final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-    // Generate exactly 7 days starting from Monday
     final weekDates = List.generate(
       7,
       (index) => startOfWeek.add(Duration(days: index)),
     );
 
     final dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    final workoutsAsync = ref.watch(recentWorkoutsProvider);
+    final workoutDates = <String>{};
+    final workoutsList = workoutsAsync.when(
+      data: (data) => data,
+      loading: () => <Map<String, dynamic>>[],
+      error: (err, stack) => <Map<String, dynamic>>[],
+    );
+
+    for (var workout in workoutsList) {
+      final date = DateTime.parse(workout['date']);
+      final dateString = '${date.year}-${date.month}-${date.day}';
+      workoutDates.add(dateString);
+    }
 
     return SizedBox(
       height: 80,
@@ -121,10 +149,8 @@ class HomeScreen extends ConsumerWidget {
               date.day == now.day &&
               date.month == now.month &&
               date.year == now.year;
-
-          // Placeholder logic: Highlight past days as "worked out" randomly for testing.
-          // Eventually, you will query SQLite to see if date < now has a workout log.
-          final hasWorkout = date.isBefore(now) && index % 2 == 0;
+          final dateString = '${date.year}-${date.month}-${date.day}';
+          final hasWorkout = workoutDates.contains(dateString);
 
           return Container(
             width: 60,
@@ -259,7 +285,6 @@ class HomeScreen extends ConsumerWidget {
     int index,
     RoutineTemplate routine,
   ) {
-    // 1. Define your 5 premium gradients
     final List<List<Color>> cardGradients = [
       const [Color(0xFF2B5876), Color(0xFF4E4376)],
       const [Color(0xFF1D4350), Color(0xFF041115)],
@@ -268,7 +293,6 @@ class HomeScreen extends ConsumerWidget {
       const [Color(0xFF0F2027), Color(0xFF203A43)],
     ];
 
-    // Cycle through the gradients based on the index
     final gradientColors = cardGradients[index % cardGradients.length];
 
     return GestureDetector(
@@ -370,7 +394,7 @@ class HomeScreen extends ConsumerWidget {
           color: const Color(0xFF2A2A2A),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: Colors.grey.withValues(alpha: 0.3),
+            color: Colors.grey.withOpacity(0.3),
             style: BorderStyle.solid,
           ),
         ),

@@ -4,7 +4,7 @@ import '../../data/datasources/database_helper.dart';
 import '../../data/repositories/workout_repository_impl.dart';
 import '../../domain/repositories/i_workout_repository.dart';
 
-// 1. DATA MODELS
+// DATA MODELS
 class RoutineTemplate {
   final int? id;
   final String title;
@@ -42,7 +42,7 @@ class RoutineTemplate {
   }
 }
 
-// 2. DATABASE & REPOSITORY PROVIDERS
+// DATABASE & REPOSITORY PROVIDERS
 // Provide SQLite database helper
 final databaseHelperProvider = Provider<DatabaseHelper>((ref) {
   return DatabaseHelper();
@@ -54,7 +54,7 @@ final workoutRepositoryProvider = Provider<IWorkoutRepository>((ref) {
   return WorkoutRepositoryImpl(dbHelper);
 });
 
-// 3. ROUTINE MANAGEMENT
+// ROUTINE MANAGEMENT
 class RoutinesNotifier extends StateNotifier<List<RoutineTemplate>> {
   final IWorkoutRepository repository;
 
@@ -84,7 +84,7 @@ final routinesProvider =
       return RoutinesNotifier(repository);
     });
 
-// 4. UI STATE PROVIDERS
+// UI STATE PROVIDERS
 final selectedFilterProvider = StateProvider<String>((ref) => 'All Type');
 final bottomNavIndexProvider = StateProvider<int>((ref) => 0);
 final isWorkoutActiveProvider = StateProvider<bool>((ref) => false);
@@ -92,7 +92,7 @@ final isRestTimerActiveProvider = StateProvider<bool>((ref) => false);
 
 final activeWorkoutIdProvider = StateProvider<int?>((ref) => null);
 
-// 5. WORKOUT ACTIONS
+// WORKOUT ACTIONS
 final saveSetProvider = Provider((ref) {
   final repository = ref.watch(workoutRepositoryProvider);
   return (String exerciseName, double weight, int reps) async {
@@ -190,4 +190,9 @@ class WeeklyScheduleNotifier extends StateNotifier<Map<int, String>> {
 final weeklyScheduleProvider = StateNotifierProvider<WeeklyScheduleNotifier, Map<int, String>>((ref) {
   final repository = ref.watch(workoutRepositoryProvider);
   return WeeklyScheduleNotifier(repository);
+});
+
+final dailyExercisesProvider = FutureProvider.family<List<RoutineTemplate>, String>((ref, category) async {
+  final repository = ref.watch(workoutRepositoryProvider);
+  return await repository.getRoutinesByCategory(category);
 });
