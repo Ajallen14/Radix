@@ -15,24 +15,8 @@ class _AddWorkoutSheetState extends ConsumerState<AddWorkoutSheet> {
   final _repsController = TextEditingController(text: '10');
 
   String _selectedCategory = 'Chest';
-  final List<String> _categories = ['Chest', 'Arms', 'Back', 'Legs', 'Core'];
+  final List<String> _categories = ['Chest', 'Shoulders', 'Arms', 'Back', 'Legs', 'Core'];
 
-  List<Color> _getGradientForCategory(String category) {
-    switch (category) {
-      case 'Chest':
-        return const [Color(0xFF2B5876), Color(0xFF4E4376)];
-      case 'Arms':
-        return const [Color(0xFF1D4350), Color(0xFF041115)];
-      case 'Back':
-        return const [Color(0xFF432B76), Color(0xFF2A0845)];
-      case 'Legs':
-        return const [Color(0xFF870000), Color(0xFF190A05)];
-      case 'Core':
-        return const [Color(0xFF0F2027), Color(0xFF203A43)];
-      default:
-        return const [Color(0xFF2A2A2A), Color(0xFF1A1A1A)];
-    }
-  }
 
   void _saveWorkout() async {
     if (_nameController.text.trim().isEmpty) return;
@@ -91,41 +75,19 @@ class _AddWorkoutSheetState extends ConsumerState<AddWorkoutSheet> {
             ),
             const SizedBox(height: 24),
 
-            // Workout Name Input
-            _buildTextField(
-              'Workout Name',
-              _nameController,
-              TextInputType.text,
-            ),
+            _buildTextField('Workout Name', _nameController, TextInputType.text),
             const SizedBox(height: 16),
 
-            // Sets and Reps Row
             Row(
               children: [
-                Expanded(
-                  child: _buildTextField(
-                    'Sets',
-                    _setsController,
-                    TextInputType.number,
-                  ),
-                ),
+                Expanded(child: _buildTextField('Sets', _setsController, TextInputType.number)),
                 const SizedBox(width: 16),
-                Expanded(
-                  child: _buildTextField(
-                    'Reps',
-                    _repsController,
-                    TextInputType.number,
-                  ),
-                ),
+                Expanded(child: _buildTextField('Reps', _repsController, TextInputType.number)),
               ],
             ),
             const SizedBox(height: 24),
 
-            // Category Selection
-            const Text(
-              'Category',
-              style: TextStyle(color: Colors.white54, fontSize: 14),
-            ),
+            const Text('Category', style: TextStyle(color: Colors.white54, fontSize: 14)),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -142,20 +104,15 @@ class _AddWorkoutSheetState extends ConsumerState<AddWorkoutSheet> {
                   selectedColor: const Color(0xFFA4EB3F),
                   labelStyle: TextStyle(
                     color: isSelected ? Colors.black : Colors.white,
-                    fontWeight: isSelected
-                        ? FontWeight.bold
-                        : FontWeight.normal,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   showCheckmark: false,
                 );
               }).toList(),
             ),
             const SizedBox(height: 32),
 
-            // Save Button
             SizedBox(
               width: double.infinity,
               height: 56,
@@ -164,14 +121,9 @@ class _AddWorkoutSheetState extends ConsumerState<AddWorkoutSheet> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFA4EB3F),
                   foregroundColor: Colors.black,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
-                child: const Text(
-                  'Save Program',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
+                child: const Text('Save Program', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -180,18 +132,11 @@ class _AddWorkoutSheetState extends ConsumerState<AddWorkoutSheet> {
     );
   }
 
-  Widget _buildTextField(
-    String label,
-    TextEditingController controller,
-    TextInputType type,
-  ) {
+  Widget _buildTextField(String label, TextEditingController controller, TextInputType type) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white54, fontSize: 14),
-        ),
+        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 14)),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
@@ -204,10 +149,7 @@ class _AddWorkoutSheetState extends ConsumerState<AddWorkoutSheet> {
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
         ),
       ],

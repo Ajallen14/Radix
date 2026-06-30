@@ -126,6 +126,7 @@ class HomeScreen extends ConsumerWidget {
 
     final workoutsAsync = ref.watch(recentWorkoutsProvider);
     final workoutDates = <String>{};
+
     final workoutsList = workoutsAsync.when(
       data: (data) => data,
       loading: () => <Map<String, dynamic>>[],
@@ -149,6 +150,7 @@ class HomeScreen extends ConsumerWidget {
               date.day == now.day &&
               date.month == now.month &&
               date.year == now.year;
+
           final dateString = '${date.year}-${date.month}-${date.day}';
           final hasWorkout = workoutDates.contains(dateString);
 
@@ -206,7 +208,15 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _buildCategoryFilters(WidgetRef ref) {
-    final categories = ['All Type', 'Chest', 'Arms', 'Back', 'Legs', 'Core'];
+    final categories = [
+      'All Type',
+      'Chest',
+      'Shoulders',
+      'Arms',
+      'Back',
+      'Legs',
+      'Core',
+    ];
     final activeFilter = ref.watch(selectedFilterProvider);
 
     return SizedBox(
@@ -394,7 +404,7 @@ class HomeScreen extends ConsumerWidget {
           color: const Color(0xFF2A2A2A),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: Colors.grey.withOpacity(0.3),
+            color: Colors.grey.withValues(alpha: 0.3),
             style: BorderStyle.solid,
           ),
         ),
