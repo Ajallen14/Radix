@@ -199,7 +199,9 @@ class ActiveWorkoutScreen extends ConsumerWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFA4EB3F),
                 disabledBackgroundColor: const Color(0xFF2A2A2A),
+                disabledForegroundColor: Colors.white24,
                 foregroundColor: Colors.black,
+                elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -222,7 +224,24 @@ class ActiveWorkoutScreen extends ConsumerWidget {
 
   // ACTIVE SESSION
   Widget _buildActiveSession(WidgetRef ref) {
-    final activeExercises = ref.watch(selectedExercisesProvider).toList();
+    final selectedTitles = ref.watch(selectedExercisesProvider);
+    final allRoutines = ref.watch(routinesProvider);
+    final selectedRoutines = allRoutines
+        .where((r) => selectedTitles.contains(r.title))
+        .toList();
+
+    final Map<String, List<String>> groupedExercises = {};
+    for (var routine in selectedRoutines) {
+      groupedExercises
+          .putIfAbsent(routine.category, () => [])
+          .add(routine.title);
+    }
+
+    final foundTitles = selectedRoutines.map((r) => r.title).toSet();
+    final unknownTitles = selectedTitles.difference(foundTitles);
+    if (unknownTitles.isNotEmpty) {
+      groupedExercises['Other'] = unknownTitles.toList();
+    }
 
     return Column(
       key: const ValueKey('active'),
@@ -266,11 +285,34 @@ class ActiveWorkoutScreen extends ConsumerWidget {
           ),
         ),
         Expanded(
-          child: ListView.builder(
+          child: ListView(
             padding: const EdgeInsets.only(bottom: 150, left: 20, right: 20),
-            itemCount: activeExercises.length,
-            itemBuilder: (context, index) =>
-                _buildActiveExerciseCard(activeExercises[index], ref),
+            children: groupedExercises.entries.map((entry) {
+              final category = entry.key;
+              final exerciseTitles = entry.value;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Body Part Header
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0, top: 12.0),
+                    child: Text(
+                      category.toUpperCase(),
+                      style: const TextStyle(
+                        color: Color(0xFFA4EB3F),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ),
+                  ...exerciseTitles.map(
+                    (title) => _buildActiveExerciseCard(title, ref),
+                  ),
+                ],
+              );
+            }).toList(),
           ),
         ),
       ],
@@ -278,6 +320,27 @@ class ActiveWorkoutScreen extends ConsumerWidget {
   }
 
   Widget _buildActiveExerciseCard(String title, WidgetRef ref) {
+    final allRoutines = ref.watch(routinesProvider);
+    final routine = allRoutines.firstWhere(
+      (r) => r.title == title,
+      orElse: () => RoutineTemplate(
+        title: title,
+        volume: '3 Sets • 10 Reps',
+        category: '',
+      ),
+    );
+
+    int numSets = 3;
+    String targetReps = '10';
+
+    final parts = routine.volume.split(' • ');
+    if (parts.length == 2) {
+      final setString = parts[0].replaceAll(RegExp(r'[^0-9]'), '');
+      final repString = parts[1].replaceAll(RegExp(r'[^0-9]'), '');
+      if (setString.isNotEmpty) numSets = int.parse(setString);
+      if (repString.isNotEmpty) targetReps = repString;
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(16),
@@ -317,9 +380,15 @@ class ActiveWorkoutScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 8),
-          _buildSetLoggingRow(title, '1', '20', '10', ref),
-          _buildSetLoggingRow(title, '2', '20', '10', ref),
-          _buildSetLoggingRow(title, '3', '20', '10', ref),
+          ...List.generate(numSets, (index) {
+            return _buildSetLoggingRow(
+              title,
+              '${index + 1}',
+              '20',
+              targetReps,
+              ref,
+            );
+          }),
         ],
       ),
     );
