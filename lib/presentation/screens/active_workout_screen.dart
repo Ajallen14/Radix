@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:radix/presentation/screens/analytics_screen.dart';
 import '../providers/core_providers.dart';
 import '../providers/timer_provider.dart';
 
@@ -471,8 +472,9 @@ class ActiveWorkoutScreen extends ConsumerWidget {
                       .read(completedSetsProvider.notifier)
                       .update((state) => <String>{...state, uniqueSetId});
 
+                  final prefSeconds = ref.read(defaultRestDurationProvider);
                   ref.read(isRestTimerActiveProvider.notifier).state = true;
-                  ref.read(restTimerProvider.notifier).start(90);
+                  ref.read(restTimerProvider.notifier).start(prefSeconds);
 
                   ref.read(saveSetProvider)(
                     exerciseName,
