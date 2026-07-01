@@ -5,11 +5,31 @@ import '../providers/core_providers.dart';
 import 'home_screen.dart';
 import 'active_workout_screen.dart';
 
-class RootScreen extends ConsumerWidget {
+class RootScreen extends ConsumerStatefulWidget {
   const RootScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<RootScreen> createState() => _RootScreenState();
+}
+
+class _RootScreenState extends ConsumerState<RootScreen> {
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    final initialIndex = ref.read(bottomNavIndexProvider);
+    _pageController = PageController(initialPage: initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final currentIndex = ref.watch(bottomNavIndexProvider);
 
     final screens = [
@@ -24,7 +44,14 @@ class RootScreen extends ConsumerWidget {
       body: Stack(
         children: [
           // The Main Content Layer
-          screens[currentIndex],
+          PageView(
+            controller: _pageController,
+            physics: const BouncingScrollPhysics(),
+            onPageChanged: (index) {
+              ref.read(bottomNavIndexProvider.notifier).state = index;
+            },
+            children: screens,
+          ),
 
           // The Floating Navigation Pill Layer
           Positioned(
@@ -55,19 +82,16 @@ class RootScreen extends ConsumerWidget {
                         index: 0,
                         icon: Icons.home_rounded,
                         currentIndex: currentIndex,
-                        ref: ref,
                       ),
                       _buildNavItem(
                         index: 1,
                         icon: Icons.fitness_center_rounded,
                         currentIndex: currentIndex,
-                        ref: ref,
                       ),
                       _buildNavItem(
                         index: 2,
                         icon: Icons.bar_chart_rounded,
                         currentIndex: currentIndex,
-                        ref: ref,
                       ),
                     ],
                   ),
@@ -84,13 +108,16 @@ class RootScreen extends ConsumerWidget {
     required int index,
     required IconData icon,
     required int currentIndex,
-    required WidgetRef ref,
   }) {
     final isSelected = index == currentIndex;
 
     return GestureDetector(
       onTap: () {
-        ref.read(bottomNavIndexProvider.notifier).state = index;
+        _pageController.animateToPage(
+          index,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
+        );
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),

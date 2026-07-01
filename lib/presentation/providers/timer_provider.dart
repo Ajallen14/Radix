@@ -4,8 +4,6 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:radix/presentation/providers/core_providers.dart';
 import 'package:vibration/vibration.dart';
 
-import '../screens/active_workout_screen.dart';
-
 class RestTimerNotifier extends StateNotifier<int> {
   final Ref ref;
   Timer? _countdownTimer;
@@ -16,7 +14,7 @@ class RestTimerNotifier extends StateNotifier<int> {
   void start(int seconds) {
     _countdownTimer?.cancel();
     _vibrateTimer?.cancel();
-    Vibration.cancel(); // Ensure any previous vibration is stopped
+    Vibration.cancel();
 
     state = seconds;
 
@@ -48,7 +46,6 @@ class RestTimerNotifier extends StateNotifier<int> {
 
   void addTime(int seconds) {
     if (state == 0) {
-      // If you add time AFTER it hit 0, stop the vibration and restart the clock
       _vibrateTimer?.cancel();
       Vibration.cancel();
       start(seconds);
