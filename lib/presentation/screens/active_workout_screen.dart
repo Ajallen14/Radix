@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:radix/presentation/screens/analytics_screen.dart';
 import '../providers/core_providers.dart';
 import '../providers/timer_provider.dart';
 
@@ -47,7 +46,10 @@ class ActiveWorkoutScreen extends ConsumerWidget {
     final schedule = ref.watch(weeklyScheduleProvider);
     final today = DateTime.now().weekday;
     final focusString = schedule[today] ?? 'Rest';
-    final bodyParts = focusString.split(' & ');
+    final bodyParts = focusString == 'Full Body'
+        ? ['Chest', 'Shoulders', 'Arms', 'Back', 'Legs', 'Core']
+        : focusString.split(' & ');
+
     final selectedExercises = ref.watch(selectedExercisesProvider);
 
     if (focusString == 'Rest' || focusString.isEmpty) {
@@ -230,7 +232,6 @@ class ActiveWorkoutScreen extends ConsumerWidget {
     final selectedRoutines = allRoutines
         .where((r) => selectedTitles.contains(r.title))
         .toList();
-
     final Map<String, List<String>> groupedExercises = {};
     for (var routine in selectedRoutines) {
       groupedExercises
@@ -322,6 +323,7 @@ class ActiveWorkoutScreen extends ConsumerWidget {
 
   Widget _buildActiveExerciseCard(String title, WidgetRef ref) {
     final allRoutines = ref.watch(routinesProvider);
+
     final routine = allRoutines.firstWhere(
       (r) => r.title == title,
       orElse: () => RoutineTemplate(
@@ -381,6 +383,7 @@ class ActiveWorkoutScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 8),
+
           ...List.generate(numSets, (index) {
             return _buildSetLoggingRow(
               title,
@@ -472,9 +475,8 @@ class ActiveWorkoutScreen extends ConsumerWidget {
                       .read(completedSetsProvider.notifier)
                       .update((state) => <String>{...state, uniqueSetId});
 
-                  final prefSeconds = ref.read(defaultRestDurationProvider);
                   ref.read(isRestTimerActiveProvider.notifier).state = true;
-                  ref.read(restTimerProvider.notifier).start(prefSeconds);
+                  ref.read(restTimerProvider.notifier).start(90);
 
                   ref.read(saveSetProvider)(
                     exerciseName,

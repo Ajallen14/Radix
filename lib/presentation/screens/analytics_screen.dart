@@ -11,6 +11,7 @@ final viewedMonthProvider = StateProvider<DateTime>((ref) {
   return DateTime(now.year, now.month);
 });
 
+// A state provider to track the global default rest time preference (in seconds)
 final defaultRestDurationProvider = StateProvider<int>((ref) => 90);
 
 class AnalyticsScreen extends ConsumerWidget {
@@ -246,10 +247,34 @@ class AnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  // MONTHLY CONSISTENCY GRID
+  // MONTHLY CONSISTENCY GRID (UPDATED EARLIEST MONTH LOGIC)
   Widget _buildMonthlyCalendar(Set<String> allActiveDates, WidgetRef ref) {
     final viewedMonth = ref.watch(viewedMonthProvider);
     final now = DateTime.now();
+
+    // 1. Determine the earliest month recorded in history
+    DateTime earliestMonth = DateTime(now.year, now.month);
+
+    if (allActiveDates.isNotEmpty) {
+      try {
+        final parsedDates = allActiveDates.map((dateStr) {
+          final parts = dateStr.split('-');
+          if (parts.length >= 2) {
+            return DateTime(int.parse(parts[0]), int.parse(parts[1]));
+          }
+          return DateTime(now.year, now.month);
+        }).toList();
+
+        parsedDates.sort((a, b) => a.compareTo(b));
+
+        // If they have older workouts, update the earliest month boundary
+        if (parsedDates.first.isBefore(earliestMonth)) {
+          earliestMonth = parsedDates.first;
+        }
+      } catch (_) {
+        // Silently fallback to current month on parse error
+      }
+    }
 
     final daysInMonth = DateTime(
       viewedMonth.year,
@@ -257,8 +282,13 @@ class AnalyticsScreen extends ConsumerWidget {
       0,
     ).day;
     final currentMonthName = DateFormat('MMMM yyyy').format(viewedMonth);
+
+    // 2. Check layout conditions
     final isCurrentMonth =
         viewedMonth.year == now.year && viewedMonth.month == now.month;
+    final isEarliestMonth =
+        viewedMonth.year == earliestMonth.year &&
+        viewedMonth.month == earliestMonth.month;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -286,14 +316,24 @@ class AnalyticsScreen extends ConsumerWidget {
                   IconButton(
                     constraints: const BoxConstraints(),
                     padding: EdgeInsets.zero,
-                    icon: const Icon(Icons.chevron_left, color: Colors.white54),
-                    onPressed: () {
-                      ref
-                          .read(viewedMonthProvider.notifier)
-                          .update(
-                            (state) => DateTime(state.year, state.month - 1),
-                          );
-                    },
+                    // Hide arrow if there is no older history
+                    icon: Icon(
+                      Icons.chevron_left,
+                      color: isEarliestMonth
+                          ? Colors.transparent
+                          : Colors.white54,
+                    ),
+                    // Disable button if there is no older history
+                    onPressed: isEarliestMonth
+                        ? null
+                        : () {
+                            ref
+                                .read(viewedMonthProvider.notifier)
+                                .update(
+                                  (state) =>
+                                      DateTime(state.year, state.month - 1),
+                                );
+                          },
                   ),
                   SizedBox(
                     width: 110,
@@ -480,7 +520,6 @@ class AnalyticsScreen extends ConsumerWidget {
       ),
       builder: (context) => Consumer(
         builder: (context, ref, child) {
-          // Read current duration inside the builder so the UI updates as you drag
           final currentRest = ref.watch(defaultRestDurationProvider);
           final minutes = (currentRest / 60).floor();
           final seconds = (currentRest % 60).toString().padLeft(2, '0');
@@ -504,7 +543,6 @@ class AnalyticsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 32),
 
-                // Huge real-time dynamic text display
                 Text(
                   '$minutes:$seconds',
                   style: const TextStyle(
@@ -516,7 +554,6 @@ class AnalyticsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // Custom styled Material Slider (Scroller)
                 SliderTheme(
                   data: SliderTheme.of(context).copyWith(
                     activeTrackColor: const Color(0xFFA4EB3F),
@@ -530,9 +567,9 @@ class AnalyticsScreen extends ConsumerWidget {
                   ),
                   child: Slider(
                     value: currentRest.toDouble(),
-                    min: 15, // Starts at 15 seconds
-                    max: 180, // Max of 3 minutes
-                    divisions: 11, // Exactly 11 steps of 15 seconds each
+                    min: 15,
+                    max: 180,
+                    divisions: 11,
                     onChanged: (value) {
                       ref.read(defaultRestDurationProvider.notifier).state =
                           value.toInt();
@@ -540,7 +577,6 @@ class AnalyticsScreen extends ConsumerWidget {
                   ),
                 ),
 
-                // Min/Max labels under the slider
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Row(
@@ -565,7 +601,6 @@ class AnalyticsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 40),
 
-                // Confirm Button
                 SizedBox(
                   width: double.infinity,
                   height: 56,
