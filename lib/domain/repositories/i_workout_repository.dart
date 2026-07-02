@@ -13,7 +13,7 @@ abstract class IWorkoutRepository {
   Future<List<Map<String, dynamic>>> getAllWorkouts();
   
   // Analytics Methods
-  Future<double> calculateTotalVolumeForSession(int workoutId);
+  Future<int> calculateTotalSetsForSession(int workoutId);
 
   // Weekly Schedule Methods
   Future<Map<int, String>> getWeeklySchedule();

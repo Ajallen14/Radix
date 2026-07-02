@@ -11,7 +11,6 @@ final viewedMonthProvider = StateProvider<DateTime>((ref) {
   return DateTime(now.year, now.month);
 });
 
-// A state provider to track the global default rest time preference (in seconds)
 final defaultRestDurationProvider = StateProvider<int>((ref) => 90);
 
 class AnalyticsScreen extends ConsumerWidget {
@@ -55,13 +54,11 @@ class AnalyticsScreen extends ConsumerWidget {
                 ),
                 data: (stats) => Column(
                   children: [
-                    _buildWeeklyChart(
-                      stats['weeklyVolume'] as Map<int, double>,
-                    ),
+                    _buildWeeklyChart(stats['weeklySets'] as Map<int, double>),
                     const SizedBox(height: 24),
                     _buildMetricCards(
                       stats['monthlyDays'] as int,
-                      stats['maxVolume'] as double,
+                      stats['maxSets'] as int,
                     ),
                     const SizedBox(height: 24),
                     _buildMonthlyCalendar(
@@ -102,7 +99,7 @@ class AnalyticsScreen extends ConsumerWidget {
   // WEEKLY ACTIVITY CHART
   Widget _buildWeeklyChart(Map<int, double> weeklyData) {
     final maxChartY = weeklyData.values.isEmpty
-        ? 1000.0
+        ? 30.0
         : weeklyData.values.reduce((curr, next) => curr > next ? curr : next) *
               1.2;
 
@@ -117,14 +114,14 @@ class AnalyticsScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Weekly Volume',
+            'Weekly Sets',
             style: TextStyle(color: Colors.white70, fontSize: 14),
           ),
           const SizedBox(height: 24),
           Expanded(
             child: BarChart(
               BarChartData(
-                maxY: maxChartY == 0 ? 100 : maxChartY,
+                maxY: maxChartY == 0 ? 15 : maxChartY,
                 titlesData: FlTitlesData(
                   show: true,
                   topTitles: const AxisTitles(
@@ -175,7 +172,7 @@ class AnalyticsScreen extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(4),
                         backDrawRodData: BackgroundBarChartRodData(
                           show: true,
-                          toY: maxChartY == 0 ? 100 : maxChartY,
+                          toY: maxChartY == 0 ? 15 : maxChartY,
                           color: Colors.white.withOpacity(0.05),
                         ),
                       ),
@@ -191,7 +188,7 @@ class AnalyticsScreen extends ConsumerWidget {
   }
 
   // METRIC CARDS
-  Widget _buildMetricCards(int monthlyDays, double maxVolume) {
+  Widget _buildMetricCards(int monthlyDays, int maxSets) {
     return Row(
       children: [
         Expanded(
@@ -204,9 +201,9 @@ class AnalyticsScreen extends ConsumerWidget {
         const SizedBox(width: 16),
         Expanded(
           child: _metricCard(
-            title: 'Max Volume (kg)',
-            value: maxVolume.toStringAsFixed(0),
-            icon: Icons.fitness_center_rounded,
+            title: 'Max Sets (Session)',
+            value: maxSets.toString(),
+            icon: Icons.layers_rounded,
           ),
         ),
       ],
@@ -247,12 +244,11 @@ class AnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  // MONTHLY CONSISTENCY GRID (UPDATED EARLIEST MONTH LOGIC)
+  // MONTHLY CONSISTENCY GRID
   Widget _buildMonthlyCalendar(Set<String> allActiveDates, WidgetRef ref) {
     final viewedMonth = ref.watch(viewedMonthProvider);
     final now = DateTime.now();
 
-    // 1. Determine the earliest month recorded in history
     DateTime earliestMonth = DateTime(now.year, now.month);
 
     if (allActiveDates.isNotEmpty) {
@@ -267,13 +263,10 @@ class AnalyticsScreen extends ConsumerWidget {
 
         parsedDates.sort((a, b) => a.compareTo(b));
 
-        // If they have older workouts, update the earliest month boundary
         if (parsedDates.first.isBefore(earliestMonth)) {
           earliestMonth = parsedDates.first;
         }
-      } catch (_) {
-        // Silently fallback to current month on parse error
-      }
+      } catch (_) {}
     }
 
     final daysInMonth = DateTime(
@@ -283,7 +276,6 @@ class AnalyticsScreen extends ConsumerWidget {
     ).day;
     final currentMonthName = DateFormat('MMMM yyyy').format(viewedMonth);
 
-    // 2. Check layout conditions
     final isCurrentMonth =
         viewedMonth.year == now.year && viewedMonth.month == now.month;
     final isEarliestMonth =
@@ -316,14 +308,12 @@ class AnalyticsScreen extends ConsumerWidget {
                   IconButton(
                     constraints: const BoxConstraints(),
                     padding: EdgeInsets.zero,
-                    // Hide arrow if there is no older history
                     icon: Icon(
                       Icons.chevron_left,
                       color: isEarliestMonth
                           ? Colors.transparent
                           : Colors.white54,
                     ),
-                    // Disable button if there is no older history
                     onPressed: isEarliestMonth
                         ? null
                         : () {
@@ -421,7 +411,7 @@ class AnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  // OPTION TO SET DEFAULT REST TIME Preference
+  // REST TIMER SETTING
   Widget _buildRestTimerSetting(WidgetRef ref, BuildContext context) {
     final currentRest = ref.watch(defaultRestDurationProvider);
     final displayMinutes = (currentRest / 60).floor();
@@ -633,7 +623,7 @@ class AnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  // RECENT WORKOUTS LIST (MAX 15 SESSIONS CAP)
+  // RECENT WORKOUTS LIST
   Widget _buildRecentWorkoutsList(List<Map<String, dynamic>> workouts) {
     if (workouts.isEmpty) {
       return const Center(

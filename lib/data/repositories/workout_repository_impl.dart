@@ -92,4 +92,8 @@ class WorkoutRepositoryImpl implements IWorkoutRepository {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
+
+  Future<int> calculateTotalSetsForSession(int workoutId) async {
+    return await _dbHelper.countSetsForSession(workoutId);
+  }
 }

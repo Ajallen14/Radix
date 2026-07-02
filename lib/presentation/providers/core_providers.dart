@@ -132,12 +132,12 @@ final analyticsStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async 
   final repository = ref.watch(workoutRepositoryProvider);
   final workouts = await ref.watch(recentWorkoutsProvider.future);
 
-  Set<String> allActiveDates = {};
+  Set<String> allActiveDates = {}; 
   int daysWorkedOutThisMonth = 0;
-  double maxVolume = 0.0;
+  int maxSets = 0;
   final now = DateTime.now();
 
-  Map<int, double> weeklyVolume = {
+  Map<int, double> weeklySets = {
     for (var i = 6; i >= 0; i--) now.subtract(Duration(days: i)).weekday: 0.0,
   };
 
@@ -151,22 +151,20 @@ final analyticsStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async 
       daysWorkedOutThisMonth++;
     }
 
-    // Calculate Volume
-    final volume = await repository.calculateTotalVolumeForSession(workoutId);
-    if (volume > maxVolume) maxVolume = volume;
+    final setsCount = await repository.calculateTotalSetsForSession(workoutId);
+    if (setsCount > maxSets) maxSets = setsCount;
 
-    // Add to Weekly Chart
     final difference = now.difference(date).inDays;
     if (difference < 7 && difference >= 0) {
-      weeklyVolume[date.weekday] = (weeklyVolume[date.weekday] ?? 0) + volume;
+      weeklySets[date.weekday] = (weeklySets[date.weekday] ?? 0) + setsCount.toDouble();
     }
   }
 
   return {
     'monthlyDays': daysWorkedOutThisMonth,
-    'maxVolume': maxVolume,
-    'weeklyVolume': weeklyVolume,
-    'allActiveDates': allActiveDates,
+    'maxSets': maxSets,
+    'weeklySets': weeklySets,
+    'allActiveDates': allActiveDates, 
   };
 });
 

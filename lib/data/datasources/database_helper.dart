@@ -104,4 +104,13 @@ class DatabaseHelper {
       whereArgs: [workoutId],
     );
   }
+
+  Future<int> countSetsForSession(int workoutId) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) FROM sets WHERE workout_id = ?', 
+      [workoutId]
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
 } 
