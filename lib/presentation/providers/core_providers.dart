@@ -100,7 +100,6 @@ final saveSetProvider = Provider((ref) {
       final currentSessionId = ref.read(activeWorkoutIdProvider);
 
       if (currentSessionId == null) {
-        print('Error: No active workout session found!');
         return;
       }
 
@@ -110,11 +109,8 @@ final saveSetProvider = Provider((ref) {
         weight,
         reps,
       );
-      print(
-        'Saved to SQLite: Session $currentSessionId | $exerciseName - $weight kg x $reps',
-      );
+    // ignore: empty_catches
     } catch (e) {
-      print('Failed to save set: $e');
     }
   };
 });

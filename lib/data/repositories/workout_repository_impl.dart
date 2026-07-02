@@ -93,6 +93,7 @@ class WorkoutRepositoryImpl implements IWorkoutRepository {
     );
   }
 
+  @override
   Future<int> calculateTotalSetsForSession(int workoutId) async {
     return await _dbHelper.countSetsForSession(workoutId);
   }
